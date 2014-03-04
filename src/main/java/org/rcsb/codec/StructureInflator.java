@@ -14,6 +14,24 @@ import java.util.zip.GZIPInputStream;
 import static org.rcsb.codec.CodecConstants.*;
 
 /**
+ * StructureInflator decodes a HESC file. The HESC file is a gzipped byte array with the following structure:
+ * 
+ * Header:
+ * Magic number        : 4 bytes
+ * Major version number: 1 byte
+ * Minor version number: 1 byte
+ * Compression method  : 1 byte
+ * 
+ * Data records:
+ *        byte        1                  1          n bytes
+ *            +---------------------+---------------+-----
+ *            |lower case record id | record length | data ..
+ *            +---------------------+---------------+-----
+ *            
+ *        byte        1                  4          n bytes
+ *            +---------------------+---------------+-----
+ *            |upper case record id | record length | data ..
+ *            +---------------------+---------------+-----
  * @author Peter
  *
  */
@@ -23,7 +41,7 @@ public class StructureInflator {
 	
 	private byte majorVersion;
 	private byte minorVersion;
-	private int compressionLevel;
+	private int compressionMethod;
 
 	private long fileSize = 0;
 	private long fileSizeCompressed = 0;
@@ -166,7 +184,7 @@ public class StructureInflator {
 			throw new IOException("Invalid file format: version: " + majorVersion + "." + minorVersion);
 		}
 
-		compressionLevel = inStream.readByte();
+		compressionMethod = inStream.readByte();
 	}
 
 	private String readMagicNumber() throws IOException {
@@ -176,7 +194,7 @@ public class StructureInflator {
 	}
 	
 	private void readData() throws IOException {
-		StructureDecoder decoder = StructureDecoder.getDecoder(minorVersion, majorVersion, compressionLevel, inStream, inflator);
+		StructureDecoder decoder = StructureDecoder.getDecoder(minorVersion, majorVersion, compressionMethod, inStream, inflator);
 		decoder.decode();
 	}
 	

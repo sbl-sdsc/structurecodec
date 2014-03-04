@@ -45,6 +45,10 @@ public final class CodecConstants {
 	public static final int BYTE4_ENCODED_MAKRKER = BYTE4_MAX_VALUE + ENCODED_COORDINATE;
 
 	public static final byte BLANK = 32;
+	
+	// Structure record identifiers. Record identifiers in lower case have a record length
+	// specified by a 1-byte values, whereas record identifiers in uppper case have
+	// the record length specified as an integer (4 bytes)
 	public static final byte STRUCTURE = 's';
 	public static final byte MODEL = 'm';
 	public static final byte CHAIN = 'c';

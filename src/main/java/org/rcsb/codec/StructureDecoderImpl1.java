@@ -485,7 +485,7 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 	
 	private int[] decodeCoords(int distance) throws IOException {
 		int v = readNextInt();
-		if (intType == 5) {
+		if (intType == ENCODED_COORDINATE) {
 			// decodes the deltaX (i4[0]), deltaY (i4[1]), and deltaZ (i4[2]) coordinates
 			// form an a 32-bit integer value. 
 			BitEncoder.fromInt(v, distance, b4, i4);
