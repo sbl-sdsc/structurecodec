@@ -3,13 +3,39 @@
  */
 package org.rcsb.codec;
 
-import static org.rcsb.codec.CodecConstants.*;
-
+import static org.rcsb.codec.CodecConstants.AMINO_ACID;
+import static org.rcsb.codec.CodecConstants.BFACTOR;
+import static org.rcsb.codec.CodecConstants.BYTE2_INTEGER_MARKER;
+import static org.rcsb.codec.CodecConstants.BYTE2_ENCODED_MAKRKER;
+import static org.rcsb.codec.CodecConstants.BYTE4_SHORT_MARKER;
+import static org.rcsb.codec.CodecConstants.BYTE4_INTEGER_MARKER;
+import static org.rcsb.codec.CodecConstants.BYTE4_ENCODED_MAKRKER;
+import static org.rcsb.codec.CodecConstants.SHORT_COORDINATE;
+import static org.rcsb.codec.CodecConstants.INTEGER_COORDINATE;
+import static org.rcsb.codec.CodecConstants.ENCODED_COORDINATE;
+import static org.rcsb.codec.CodecConstants.B_PRECISION;
+import static org.rcsb.codec.CodecConstants.B_SCALE;
+import static org.rcsb.codec.CodecConstants.CHAIN;
+import static org.rcsb.codec.CodecConstants.COORD;
+import static org.rcsb.codec.CodecConstants.END;
+import static org.rcsb.codec.CodecConstants.GINFO;
+import static org.rcsb.codec.CodecConstants.GROUP;
+import static org.rcsb.codec.CodecConstants.HEAD;
+import static org.rcsb.codec.CodecConstants.MODEL;
+import static org.rcsb.codec.CodecConstants.NUCLEOTIDE;
+import static org.rcsb.codec.CodecConstants.NUCLEOTIDE_BOND_LENGTH;
+import static org.rcsb.codec.CodecConstants.NUCLEOTIDE_TAIL_ATOM_NAME;
+import static org.rcsb.codec.CodecConstants.OCCUPANCY;
+import static org.rcsb.codec.CodecConstants.PEPTIDE_BOND_LENGTH;
+import static org.rcsb.codec.CodecConstants.PEPTIDE_TAIL_ATOM_NAME;
+import static org.rcsb.codec.CodecConstants.SEQUENCE;
+import static org.rcsb.codec.CodecConstants.STRUCTURE;
+import static org.rcsb.codec.CodecConstants.TAIL;
+import static org.rcsb.codec.CodecConstants.XYZ_SCALE;
 
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -106,11 +132,13 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 	private boolean useBfactor = false;
 	private boolean useOccupancy = false;
 
-	private StructureInflatorInterface deflator;
+	private StructureInflatorInterface inflator;
 
-	public StructureDecoderImpl1(DataInputStream dataInputStream, StructureInflatorInterface deflator) {
+	private static final int MAX_GROUP_SIZE = 1024;
+
+	public StructureDecoderImpl1(DataInputStream dataInputStream, StructureInflatorInterface inflator) {
 		this.inStream = dataInputStream;
-		this.deflator = deflator;
+		this.inflator = inflator;
 	}
 	
 	public void decode() throws IOException {	
@@ -150,14 +178,8 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 			case OCCUPANCY:
 				readOccupancyRecord();
 				break;
-//			default:
-//				if (recordId <= ZRecord) {
-//					inStream.skipBytes(inStream.readByte());
-//				} else {
-//					inStream.skipBytes(inStream.readInt());
-//				}
-//				System.out.println("recordId: " + recordId + " skipping");
-//				break;
+			default:
+				throw new IOException("StructureDecoder: Invalid record: " + recordId);
 			}
 		}
 	}
@@ -165,6 +187,7 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 	private void readSequenceRecord() throws IOException {
 		int len = inStream.readInt();
 		String sequence = readFixedLengthString(len);
+//		System.out.println("readSequenceRecord: " + sequence);
 		sequences.add(sequence);
 	}
 
@@ -184,7 +207,6 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 		// TODO this info needs to go into an array (size model number if not homogeneous)
 		inStream.skipBytes(1);
 		chainCounts.add(inStream.readInt());
-//		System.out.println("chainCount: " + chainCounts.get(chainCounts.size()-1));
 	}
 	
 	private void readChainRecord() throws IOException {
@@ -193,11 +215,9 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 		sequenceIndex = inStream.readInt();
 		sequenceIndices.add(sequenceIndex);
 		String chainId = readFixedLengthString(4);
-//		System.out.println("chainId: " + chainId);
 		chainIds.add(chainId);
 		int groupCount = inStream.readInt();	
 		groupCounts.add(groupCount);
-//		System.out.println("groupCount: " + groupCount);
 		groupNumber = 0;	
 	}
 	
@@ -206,14 +226,12 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 		int len = inStream.readByte();
 		int groupIndex = inStream.readInt();
 		groupIndices.add(groupIndex);
-//		System.out.println("groupIndex: " + groupIndex);
+
 		if (len == 8) {
 			groupNumber = inStream.readInt();
 			groupNumbers.add(groupNumber);
-//			System.out.println("groupNumber read: " + groupNumber);
 		} else {
 			groupNumbers.add(++groupNumber);
-//			System.out.println("groupNumber calc: " + groupNumber);
 		}
 	}
 	
@@ -257,15 +275,14 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 	}
 
 	private void readCoordRecord() throws IOException {
-		//		System.out.println("readCoordRecord");
-	//	int len = inStream.readInt();
+	//			System.out.println("readCoordRecord");
 		inStream.skipBytes(4);
-		int[] x = new int[1024];
-		int[] y = new int[1024];
-		int[] z = new int[1024];
-		int[] b = new int[1024];
+		int[] x = new int[MAX_GROUP_SIZE];
+		int[] y = new int[MAX_GROUP_SIZE];
+		int[] z = new int[MAX_GROUP_SIZE];
+		int[] b = new int[MAX_GROUP_SIZE];
 
-		deflator.setModelCount(modelCount);
+		inflator.setModelCount(modelCount);
 		
 		byteOffset = 0;
 		intType = 4;
@@ -283,25 +300,28 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 			     chainCount = chainCounts.get(m);
 			}
 			
-			deflator.setModelInfo(m, chainCount);
+			inflator.setModelInfo(m, chainCount);
 
-			for (int i = 0; i < chainCount; i++) {			
+			for (int i = 0; i < chainCount; i++) {	
+				// integer atom coordinates and b-factor
 				int xOffset = 0;
 				int yOffset = 0;
 				int zOffset = 0;
 				int bOffset = 0;
 				
-				int xLink = 0;
-				int yLink = 0;
-				int zLink = 0;
-				int bLink = 0;
+				// integer atom coordinates and b-factor for the 
+				// polymer tail atom from the previous group (residue)
+				int xTail = 0;
+				int yTail = 0;
+				int zTail = 0;
+				int bTail = 0;
 				boolean hasTail = false;
 						
 				String chainId = chainIds.get(chainIndex);
-				int seqIndex = sequenceIndices.get(chainIndex);
+				int seqIndex = sequenceIndices.get(chainIndex); // not used currently
 				int groupCount = groupCounts.get(chainIndex);
 				
-				deflator.setChainInfo(chainId, groupCount);
+				inflator.setChainInfo(chainId, groupCount);
 				chainIndex++;
 
 				for (int j = 0; j < groupCount; j++) {
@@ -312,7 +332,7 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 					String[] info = groupInfo.get(gIndex);
 					int[] bondList = bondInfo.get(gIndex);
 					int atomCount = bondList.length/2;
-					System.out.println("atomCount: " + atomCount);
+	//				System.out.println("Getting goup info: atomCount: " + atomCount);
 					byte flags = flagInfo.get(gIndex);
 
 					boolean isAminoAcid = (flags & AMINO_ACID) != 0;
@@ -320,10 +340,10 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 				
 					boolean hasHead =  (flags & HEAD) != 0;
 					if (! hasTail) {
-						xLink = 0;
-						yLink = 0;
-						zLink = 0;
-						bLink = 0;
+						xTail = 0;
+						yTail = 0;
+						zTail = 0;
+						bTail = 0;
 					}
 
 					int index = 0;
@@ -337,10 +357,11 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 						polymerType = 2;
 					} 
 					
-					deflator.setGroupInfo(groupName, groupNumber, insertionCode, polymerType, atomCount);
+					inflator.setGroupInfo(groupName, groupNumber, insertionCode, polymerType, atomCount);
 
-					// TODO does this zero out the previous coords?
-					if (atomCount > 1024) {
+					// no group is larger than MAX_GROUP_SIZE, but
+					// just in case that ever changes, accommodate large sizes
+					if (atomCount > MAX_GROUP_SIZE) {
 						x = new int[atomCount];
 						y = new int[atomCount];
 						z = new int[atomCount];
@@ -353,38 +374,29 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 						String element = info[index++];
 						char altLoc = info[index++].charAt(0);
 
-	//					boolean isLink = xLink != 0 || yLink != 0 || zLink != 0 || bLink != 0;
-						int distance = 0;
+						int bondLength = 0;
 						if (bondList[k] >=0) {
-							distance = bondList[atomCount+k];
+							bondLength = bondList[atomCount+k];
 						} else if (k == 0 && isAminoAcid && hasHead && hasTail) {
-							distance = PEPTIDE_BOND_LENGTH;
+							bondLength = PEPTIDE_BOND_LENGTH;
 						} else if (k == 0 && isNucleotide && hasHead && hasTail) {
-							distance = NUCLEOTIDE_BOND_LENGTH;
+							bondLength = NUCLEOTIDE_BOND_LENGTH;
 						}
 
-						int[] xyz = decodeCoords(distance);
+						int[] xyz = decodeCoords(bondLength);
 						
-//						if (xyz[2] == -14821) {
-//							System.out.println(Arrays.toString(xyz));
-//							System.out.println("distance: " + distance);
-//						}
-				//		System.out.println("decode: " + atomData[0] + "," + atomData[1] + "," + atomData[2]);
 						if (bondList[k] >=0) {
 							// use coordinates from a previous atom in this group
-							int ind = bondList[k];
-							xOffset = x[ind];
-							yOffset = y[ind];
-							zOffset = z[ind];
-							bOffset = b[ind];
+							int reference = bondList[k];
+							xOffset = x[reference];
+							yOffset = y[reference];
+							zOffset = z[reference];
+							bOffset = b[reference];
 						} else if (k == 0 && hasTail && hasHead) {
-							// TODO need to check if the first atom is really a link atom (could be missing, i.e., CA model)
-							// take difference to previous linked residue
-							// need to check if amino or nucleic
-							xOffset = xLink;
-							yOffset = yLink;
-							zOffset = zLink;
-							bOffset = bLink;
+							xOffset = xTail;
+							yOffset = yTail;
+							zOffset = zTail;
+							bOffset = bTail;
 						}
 
 						xOffset += xyz[0];
@@ -393,15 +405,7 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 						if (useBfactor) {
 							bOffset += bFactors.get(atomIndex);
 						}
-//						if (zOffset == 45887) {
-//							System.out.println("isLink: " + isLink);
-//							System.out.println("distance: " + distance);
-//							System.out.println("link: " + xLink+","+yLink+","+zLink+","+bLink);
-//							System.out.println("delta: " + xyz[0]+","+xyz[1]+","+xyz[2]+","+bFactors.get(atomIndex));
-//							System.out.println("offset: " + xOffset+","+yOffset+","+zOffset+","+bOffset);
-//							System.out.println("atomIndex: " + atomIndex);
-//							System.out.println("bOffset: " + bOffset);
-//						}
+
 						int occ = B_PRECISION;
 						if (useOccupancy) {
 							occ = occupancy[atomIndex];
@@ -413,13 +417,13 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 						z[k] = zOffset;
 						b[k] = bOffset;
 
-						deflator.setAtomInfo(atomName, 0, altLoc, xOffset*XYZ_SCALE, yOffset*XYZ_SCALE, zOffset*XYZ_SCALE, occ*B_SCALE, bOffset*B_SCALE, element);
+						inflator.setAtomInfo(atomName, 0, altLoc, xOffset*XYZ_SCALE, yOffset*XYZ_SCALE, zOffset*XYZ_SCALE, occ*B_SCALE, bOffset*B_SCALE, element);
 
-						if ((isAminoAcid && atomNameTrimmed.equals("C")) || (isNucleotide && atomNameTrimmed.equals("O3'"))) {
-							xLink = xOffset;
-							yLink = yOffset;
-							zLink = zOffset;
-							bLink = bOffset;
+						if ((isAminoAcid && atomNameTrimmed.equals(PEPTIDE_TAIL_ATOM_NAME) || (isNucleotide && atomNameTrimmed.equals(NUCLEOTIDE_TAIL_ATOM_NAME)))) {
+							xTail = xOffset;
+							yTail = yOffset;
+							zTail = zOffset;
+							bTail = bOffset;
 						}	
 					
 					}
@@ -429,53 +433,48 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 			}
 		}
 	}
-
-	private void skipToNextRecord() throws IOException {
-		int len = inStream.readInt();
-		inStream.skipBytes(len);
-	}
 	
 	private int readNextInt() throws IOException {
 		int v = 0;
 		switch (intType) {
-		case 2:
+		case SHORT_COORDINATE:
 			v = inStream.readShort();
 			byteOffset += 2;
 			
 			switch (v) {
-			case BYTE2_MARKER4: 
-				intType = 4;
+			case BYTE2_INTEGER_MARKER: 
+				intType = INTEGER_COORDINATE;
 				return readNextInt();
-			case BYTE2_MARKER5: 
-				intType = 5;
+			case BYTE2_ENCODED_MAKRKER: 
+				intType = ENCODED_COORDINATE;
 				return readNextInt();
 			}
 			break;
 
-		case 4:
+		case INTEGER_COORDINATE:
 			v = inStream.readInt();
 			byteOffset += 4;
 
 			switch (v) {
-			case BYTE4_MARKER2: 
-				intType = 2;
+			case BYTE4_SHORT_MARKER: 
+				intType = SHORT_COORDINATE;
 				return readNextInt();
-			case BYTE4_MARKER5: 
-				intType = 5;
+			case BYTE4_ENCODED_MAKRKER: 
+				intType = ENCODED_COORDINATE;
 				return readNextInt();
 			}
 			break;
 			
-		case 5:
+		case ENCODED_COORDINATE:
 			v = inStream.readInt();
 			byteOffset += 4;
 
 			switch (v) {
-			case BYTE4_MARKER2: 
-				intType = 2;
+			case BYTE4_SHORT_MARKER: 
+				intType = SHORT_COORDINATE;
 				return readNextInt();
-			case BYTE4_MARKER4: 
-				intType = 4;
+			case BYTE4_INTEGER_MARKER: 
+				intType = INTEGER_COORDINATE;
 				return readNextInt();
 			}
 			break;
@@ -487,6 +486,8 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 	private int[] decodeCoords(int distance) throws IOException {
 		int v = readNextInt();
 		if (intType == 5) {
+			// decodes the deltaX (i4[0]), deltaY (i4[1]), and deltaZ (i4[2]) coordinates
+			// form an a 32-bit integer value. 
 			BitEncoder.fromInt(v, distance, b4, i4);
 		} else {
 			i4[0] = v;

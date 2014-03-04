@@ -2,9 +2,10 @@ package org.rcsb.codec;
 
 public final class CodecConstants {
 	public static final String MAGIC_NUMBER = "HESC"; // High Efficiency Structure Codec
-	// TODO remove .gz extension
-	public static final String FileExtension = ".hesc.gz";
-	// note, you must specify major and minor versions in pairs. Both arrays must of the same size
+	public static final String CODEC_FILE_EXTENSION = ".hesc";
+	
+	// The following two arrays list the supported versions major/minor version numbers
+	// Both arrays must of the same size
 	public static final byte[] MAJOR_VERSIONS = {0};
 	public static final byte[] MINOR_VERSIONS = {0};
 	
@@ -22,17 +23,26 @@ public final class CodecConstants {
 	public static final int PEPTIDE_BOND_LENGTH = (int)Math.round(1.325 * XYZ_PRECISION);
 	public static final int NUCLEOTIDE_BOND_LENGTH = (int)Math.round(1.6 * XYZ_PRECISION);
 	
+	public static final String PEPTIDE_HEAD_ATOM_NAME = "N";
+	public static final String PEPTIDE_TAIL_ATOM_NAME = "C";
+	public static final String NUCLEOTIDE_HEAD_ATOM_NAME = "P";
+	public static final String NUCLEOTIDE_TAIL_ATOM_NAME = "O3'";
+	
 	public static final int BYTE2_MIN_VALUE = Short.MIN_VALUE;
 	public static final int BYTE2_MAX_VALUE = Short.MAX_VALUE-5;
 	public static final int BYTE4_MAX_VALUE = Integer.MAX_VALUE-5;
+	
+	public static final int SHORT_COORDINATE = 2;
+	public static final int INTEGER_COORDINATE = 4;
+	public static final int ENCODED_COORDINATE = 5;
 
-	public static final int BYTE2_MARKER2 = BYTE2_MAX_VALUE + 2;
-	public static final int BYTE2_MARKER4 = BYTE2_MAX_VALUE + 4;
-	public static final int BYTE2_MARKER5 = BYTE2_MAX_VALUE + 5;
+	public static final int BYTE2_SHORT_MARKER = BYTE2_MAX_VALUE + SHORT_COORDINATE;
+	public static final int BYTE2_INTEGER_MARKER = BYTE2_MAX_VALUE + INTEGER_COORDINATE;
+	public static final int BYTE2_ENCODED_MAKRKER = BYTE2_MAX_VALUE + ENCODED_COORDINATE;
 
-	public static final int BYTE4_MARKER2 = BYTE4_MAX_VALUE + 2;
-	public static final int BYTE4_MARKER4 = BYTE4_MAX_VALUE + 4;
-	public static final int BYTE4_MARKER5 = BYTE4_MAX_VALUE + 5;
+	public static final int BYTE4_SHORT_MARKER = BYTE4_MAX_VALUE + SHORT_COORDINATE;
+	public static final int BYTE4_INTEGER_MARKER = BYTE4_MAX_VALUE + INTEGER_COORDINATE;
+	public static final int BYTE4_ENCODED_MAKRKER = BYTE4_MAX_VALUE + ENCODED_COORDINATE;
 
 	public static final byte BLANK = 32;
 	public static final byte STRUCTURE = 's';
