@@ -6,15 +6,15 @@ package org.rcsb.codec;
 import static org.rcsb.codec.CodecConstants.AMINO_ACID;
 import static org.rcsb.codec.CodecConstants.BFACTOR;
 import static org.rcsb.codec.CodecConstants.BYTE2_INTEGER_MARKER;
-import static org.rcsb.codec.CodecConstants.BYTE2_ENCODED_MAKRKER;
+import static org.rcsb.codec.CodecConstants.BYTE2_ENCODED_MARKER;
 import static org.rcsb.codec.CodecConstants.BYTE4_SHORT_MARKER;
 import static org.rcsb.codec.CodecConstants.BYTE4_INTEGER_MARKER;
-import static org.rcsb.codec.CodecConstants.BYTE4_ENCODED_MAKRKER;
-import static org.rcsb.codec.CodecConstants.SHORT_COORDINATE;
-import static org.rcsb.codec.CodecConstants.INTEGER_COORDINATE;
-import static org.rcsb.codec.CodecConstants.ENCODED_COORDINATE;
-import static org.rcsb.codec.CodecConstants.B_PRECISION;
-import static org.rcsb.codec.CodecConstants.B_SCALE;
+import static org.rcsb.codec.CodecConstants.BYTE4_ENCODED_MARKER;
+import static org.rcsb.codec.CodecConstants.SHORT_COORDINATE_TYPE;
+import static org.rcsb.codec.CodecConstants.INTEGER_COORDINATE_TYPE;
+import static org.rcsb.codec.CodecConstants.ENCODED_COORDINATE_TYPE;
+import static org.rcsb.codec.CodecConstants.BO_SCALE;
+import static org.rcsb.codec.CodecConstants.BO_PRECISION;
 import static org.rcsb.codec.CodecConstants.CHAIN;
 import static org.rcsb.codec.CodecConstants.COORD;
 import static org.rcsb.codec.CodecConstants.END;
@@ -31,7 +31,7 @@ import static org.rcsb.codec.CodecConstants.PEPTIDE_TAIL_ATOM_NAME;
 import static org.rcsb.codec.CodecConstants.SEQUENCE;
 import static org.rcsb.codec.CodecConstants.STRUCTURE;
 import static org.rcsb.codec.CodecConstants.TAIL;
-import static org.rcsb.codec.CodecConstants.XYZ_SCALE;
+import static org.rcsb.codec.CodecConstants.XYZ_PRECISION;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -39,74 +39,43 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * StructureToBinary writes/reads the "Atom" section of a PDB/mmCIF file to/from a binary files.
+ * StructureDecoderImpl1 decodes the data section of a High-Efficiency Structure Codec (HESC) encoded byte array (compression method 1). 
+ * The StructureInflatorInterface must be implemented to use this class.
  * 
- * Format:
- * magic number "PDBb" (4 bytes)
- * version string (4 bytes)
+ * The data section of HESC is a set of records, terminated by the END record.
+ * The following records have the general format: record id, record length in number of bytes, data ..
  * 
- * The following records have the general format:
- * 
- * Record id, record length in number of bytes, data ..
- *    
- * Byte number  0   1   2   3   4   5   6   7   8   9
- *            +---+---+---+---+---+---+---+---+---+---+--
- *            |id | record length | data ..
- *            +---+---+---+---+---+---+---+---+---+---+--
- * 
- *            | N |             4 | model count (int = 4 bytes)
- *            
- *            | M |             4 | chains count in model (int = 4 bytes)
- *            
- *            | C |             8 | chain id (4 bytes), group count (int = 4 bytes)
- *            
- *            | G |            12 | short group record: group name (3 bytes), group number (int = 4 bytes), insertion code (1 byte), atom count (int = 4 bytes)
- *            
- *            | G |            24 | long group record: group name (3 bytes), group number (4 bytes), insertion code (1 byte), atom count (4 bytes), 
- *                                  xOffset(4 bytes), yOffset (4 bytes), zOffset (4 bytes)
- *            
- *            | A |            17 | short atom record: atom name with PDB spacing (4 bytes), element string (2 bytes), 
- *                                  alternative location indicator (1 byte), deltaX (short = 2 bytes), deltaY (short = 2 bytes), deltaZ (short = 2 bytes), 
- *                                  occupancy (short = 2 bytes), temperature factor (short = 2 bytes)
- *            
- *            | A |            27 | long atom record: atom name with PDB spacing (4 bytes), element string (2 bytes), 
- *                                  alternative location indicator (1 byte), x (float = 4 bytes), y (4 bytes), z (4 bytes), 
- *                                  occupancy (4 bytes), temperature factor (4 bytes)
+ *                         +----------+---------------+---+---+---+---+---+---+---+--
+ *                         |record id | record length | data ...
+ *                         +----------+---------------+---+---+---+---+---+---+---+--
+ *  STRUCTURE              |        s |          byte | model count (int), homogeneousModel (boolean)
+ *  MODEL                  |        m |          byte | chain count (int)
+ *  CHAIN                  |        c |          byte | sequenceIndex (int), chain id (4 bytes), groupCount (int)
+ *  GROUP                  |        g |          byte | groupIndex (int), [groupNumber (int)]
+ *  GINFO                  |        I |           int | atomCount (short), flag (1 byte), group information (len - 4*atomCount - 3 bytes), bond information (4*atomCount shorts)
+ *  SEQUENCE               |        Q |           int | sequence string using 1-letter codes (note, this record is not used currently)
+ *  COORD                  |        X |           int | atom coordinates encoded as list of integers and shorts
+ *  BFACTOR                |        T |           int | b factors encoded as list of integer and shorts
+ *  OCCUPANCY              |        O |           int | occupancies (len/2 shorts)
+ *  END                    |        e |          none | none
+ *  
+ *  Note: 
+ *     Lower case record ids use 1 byte for the record length 
+ *     Upper case record ids use 4 bytes (int) for the record length
+ *     Data items in [ ] are optional, the record length will indicate if these data are present
  *                                  
- * for short atom record:  x = deltaX * 0.001 + xOffset; deltaY * 0.001 + yOffset; deltaZ * 0.001 + zOffset; 
- *                         o = occupancy * 0.001, b = temperature factor * 0.001;
- *            
- * Record order in file:
- * 
- *  magic number
- *  version
- *  N
- *  M model 1
- *  C chain 1
- *    G long group record 1    OR     G short group record 1
- *      A short atom record 1           A long atom record 1
- *      A short atom record 2           A long atom record 1
- *      ...
- *    G group 2
- *      ...
- *  C chain 2
- *  ..
- *  M model 2
- *  ..
- * 
- *
  * @author Peter Rose
  *
  */
 public class StructureDecoderImpl1 extends StructureDecoder {
-	protected DataInputStream inStream = null;
+	private DataInputStream inStream = null;
 
 	// byte arrays for temporary data
 	private byte[] b1 = new byte[1];
 	private byte[] b2 = new byte[2];
 	private byte[] b3 = new byte[3];
 	private byte[] b4 = new byte[4];
-	private int[] i4 = new int[4];
+	private int[] buffer = new int[4];
 
 	private int modelCount = 0;
 	private int sequenceIndex = 0;
@@ -203,8 +172,6 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 	}
 	
 	private void readModelRecord() throws IOException {
-//		System.out.println("readModelRecord");
-		// TODO this info needs to go into an array (size model number if not homogeneous)
 		inStream.skipBytes(1);
 		chainCounts.add(inStream.readInt());
 	}
@@ -222,7 +189,6 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 	}
 	
 	private void readGroupRecord() throws IOException {
-//		System.out.println("readGroupRecord");
 		int len = inStream.readByte();
 		int groupIndex = inStream.readInt();
 		groupIndices.add(groupIndex);
@@ -231,6 +197,7 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 			groupNumber = inStream.readInt();
 			groupNumbers.add(groupNumber);
 		} else {
+			// if no explicit group number is given, then the group number are sequential
 			groupNumbers.add(++groupNumber);
 		}
 	}
@@ -297,7 +264,7 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 				groupIndex = 0;
 				chainCount = chainCounts.get(0);
 			} else {
-			     chainCount = chainCounts.get(m);
+			    chainCount = chainCounts.get(m);
 			}
 			
 			inflator.setModelInfo(m, chainCount);
@@ -406,7 +373,7 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 							bOffset += bFactors.get(atomIndex);
 						}
 
-						int occ = B_PRECISION;
+						int occ = BO_SCALE;
 						if (useOccupancy) {
 							occ = occupancy[atomIndex];
 						}
@@ -417,15 +384,14 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 						z[k] = zOffset;
 						b[k] = bOffset;
 
-						inflator.setAtomInfo(atomName, 0, altLoc, xOffset*XYZ_SCALE, yOffset*XYZ_SCALE, zOffset*XYZ_SCALE, occ*B_SCALE, bOffset*B_SCALE, element);
+						inflator.setAtomInfo(atomName, 0, altLoc, xOffset*XYZ_PRECISION, yOffset*XYZ_PRECISION, zOffset*XYZ_PRECISION, occ*BO_PRECISION, bOffset*BO_PRECISION, element);
 
 						if ((isAminoAcid && atomNameTrimmed.equals(PEPTIDE_TAIL_ATOM_NAME) || (isNucleotide && atomNameTrimmed.equals(NUCLEOTIDE_TAIL_ATOM_NAME)))) {
 							xTail = xOffset;
 							yTail = yOffset;
 							zTail = zOffset;
 							bTail = bOffset;
-						}	
-					
+						}			
 					}
 					
 					hasTail =  (flags & TAIL) != 0;
@@ -437,44 +403,44 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 	private int readNextInt() throws IOException {
 		int v = 0;
 		switch (intType) {
-		case SHORT_COORDINATE:
+		case SHORT_COORDINATE_TYPE:
 			v = inStream.readShort();
 			byteOffset += 2;
 			
 			switch (v) {
 			case BYTE2_INTEGER_MARKER: 
-				intType = INTEGER_COORDINATE;
+				intType = INTEGER_COORDINATE_TYPE;
 				return readNextInt();
-			case BYTE2_ENCODED_MAKRKER: 
-				intType = ENCODED_COORDINATE;
+			case BYTE2_ENCODED_MARKER: 
+				intType = ENCODED_COORDINATE_TYPE;
 				return readNextInt();
 			}
 			break;
 
-		case INTEGER_COORDINATE:
+		case INTEGER_COORDINATE_TYPE:
 			v = inStream.readInt();
 			byteOffset += 4;
 
 			switch (v) {
 			case BYTE4_SHORT_MARKER: 
-				intType = SHORT_COORDINATE;
+				intType = SHORT_COORDINATE_TYPE;
 				return readNextInt();
-			case BYTE4_ENCODED_MAKRKER: 
-				intType = ENCODED_COORDINATE;
+			case BYTE4_ENCODED_MARKER: 
+				intType = ENCODED_COORDINATE_TYPE;
 				return readNextInt();
 			}
 			break;
 			
-		case ENCODED_COORDINATE:
+		case ENCODED_COORDINATE_TYPE:
 			v = inStream.readInt();
 			byteOffset += 4;
 
 			switch (v) {
 			case BYTE4_SHORT_MARKER: 
-				intType = SHORT_COORDINATE;
+				intType = SHORT_COORDINATE_TYPE;
 				return readNextInt();
 			case BYTE4_INTEGER_MARKER: 
-				intType = INTEGER_COORDINATE;
+				intType = INTEGER_COORDINATE_TYPE;
 				return readNextInt();
 			}
 			break;
@@ -483,18 +449,20 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 		return v;
 	}
 	
-	private int[] decodeCoords(int distance) throws IOException {
+	private int[] decodeCoords(int bondLength) throws IOException {
 		int v = readNextInt();
-		if (intType == ENCODED_COORDINATE) {
-			// decodes the deltaX (i4[0]), deltaY (i4[1]), and deltaZ (i4[2]) coordinates
-			// form an a 32-bit integer value. 
-			BitEncoder.fromInt(v, distance, b4, i4);
+		if (intType == ENCODED_COORDINATE_TYPE) {
+			// decodes the deltaX (buffer[0]), deltaY (buffer[1]), and deltaZ (buffer[2]) coordinates
+			// from a single 32-bit integer value, using the standard bond length as a parameter
+			BitEncoder.fromInt(v, bondLength, b4, buffer);
 		} else {
-			i4[0] = v;
-			i4[1] = readNextInt();
-			i4[2] = readNextInt();
+			// decodes the deltaX (buffer[0]), deltaY (buffer[1]), and deltaZ (buffer[2]) coordinates
+			// from three integer values
+			buffer[0] = v;
+			buffer[1] = readNextInt();
+			buffer[2] = readNextInt();
 		}
-		return i4;
+		return buffer;
 	}
 
 	private String[] readGroupInfo(int length) throws IOException {
@@ -507,7 +475,7 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 		info[1] = new String(b1); // insertion code
 		for (int i = 2; i < len; i += 3) {
 			inStream.read(b4);
-			info[i] = new String(b4); // atom name
+			info[i] = new String(b4); // atom name including spaces
 			inStream.read(b2);
 			info[i+1] = new String(b2).trim(); // element name
 			inStream.read(b1);

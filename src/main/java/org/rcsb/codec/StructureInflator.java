@@ -139,7 +139,6 @@ public class StructureInflator {
 		readTime += time;
 	}
 
-	
 	private void openFile(String fileName) throws Exception {
 		if (! fileName.endsWith(CODEC_FILE_EXTENSION)) {
 			throw new IOException("StructureInflator: File name has invalid extension: " + fileName + ". File extension .hesc required");
