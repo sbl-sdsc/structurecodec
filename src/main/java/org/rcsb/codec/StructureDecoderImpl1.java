@@ -45,19 +45,19 @@ import java.util.List;
  * The data section of HESC is a set of records, terminated by the END record.
  * The following records have the general format: record id, record length in number of bytes, data ..
  * 
- *                         +----------+---------------+---+---+---+---+---+---+---+--
- *                         |record id | record length | data ...
- *                         +----------+---------------+---+---+---+---+---+---+---+--
- *  STRUCTURE              |        s |          byte | model count (int), homogeneousModel (boolean)
- *  MODEL                  |        m |          byte | chain count (int)
- *  CHAIN                  |        c |          byte | sequenceIndex (int), chain id (4 bytes), groupCount (int)
- *  GROUP                  |        g |          byte | groupIndex (int), [groupNumber (int)]
- *  GINFO                  |        I |           int | atomCount (short), flag (1 byte), group information (len - 4*atomCount - 3 bytes), bond information (4*atomCount shorts)
- *  SEQUENCE               |        Q |           int | sequence string using 1-letter codes (note, this record is not used currently)
- *  COORD                  |        X |           int | atom coordinates encoded as list of integers and shorts
- *  BFACTOR                |        T |           int | b factors encoded as list of integer and shorts
- *  OCCUPANCY              |        O |           int | occupancies (len/2 shorts)
- *  END                    |        e |          none | none
+ *                    +----------+---------------+---+---+---+---+---+---+---+--
+ *                    |record id | record length | data ...
+ *                    +----------+---------------+---+---+---+---+---+---+---+--
+ *  STRUCTURE         |        s |          byte | model count (int), homogeneousModel (boolean)
+ *  MODEL             |        m |          byte | chain count (int)
+ *  CHAIN             |        c |          byte | sequenceIndex (int), chain id (4 bytes), groupCount (int)
+ *  GROUP             |        g |          byte | groupIndex (int), [groupNumber (int)]
+ *  GINFO             |        I |           int | atomCount (short), flag (1 byte), group information (len - 4*atomCount - 3 bytes), bond information (4*atomCount shorts)
+ *  SEQUENCE          |        Q |           int | sequence string using 1-letter codes (note, this record is not used currently)
+ *  COORD             |        X |           int | atom coordinates encoded as list of integers and shorts
+ *  BFACTOR           |        T |           int | b factors encoded as list of integer and shorts
+ *  OCCUPANCY         |        O |           int | occupancies (len/2 shorts)
+ *  END               |        e |          none | none
  *  
  *  Note: 
  *     Lower case record ids use 1 byte for the record length 
@@ -89,7 +89,7 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 	private List<Integer> sequenceIndices = new ArrayList<Integer>();
 	private List<String> chainIds = null;
 	private List<Integer> chainCounts = new ArrayList<Integer>();
-	private List<Integer> groupCounts = new ArrayList<Integer>();
+	private List<Integer> groupCounts = null;
 	private List<Integer> groupIndices = new ArrayList<Integer>();
 	private List<Integer> groupNumbers = new ArrayList<Integer>();
 	private List<String[]> groupInfo = new ArrayList<String[]>();
@@ -110,6 +110,12 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 		this.inflator = inflator;
 	}
 	
+	/**
+	 * Decodes the structure from the passed in dataInputStream. It reads each record and fills 
+	 * in the data structures provided by the StructureInflatorInterface implementation. Decoding
+	 * stops when the END record id is encountered. Call decode() only once, or it will attempt
+	 * to ready beyond the end of the dataInputStream.
+	 */
 	public void decode() throws IOException {	
 		modelCount = 0;
 		chainCount = 0;
@@ -117,7 +123,7 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 		
 		byte recordId = 0;
 		
-		while ((recordId = (byte) inStream.readByte()) != END) {
+		while ((recordId = inStream.readByte()) != END) {
 
 			switch (recordId) {
 			case STRUCTURE:
@@ -156,17 +162,13 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 	private void readSequenceRecord() throws IOException {
 		int len = inStream.readInt();
 		String sequence = readFixedLengthString(len);
-//		System.out.println("readSequenceRecord: " + sequence);
 		sequences.add(sequence);
 	}
 
 	private void readStructureRecord() throws IOException {
-	//	System.out.println("readStructureRecord");
 		inStream.skipBytes(1);
 		modelCount = inStream.readInt();	
 		homogeneousModel = inStream.readBoolean();
-	//	System.out.println("modelCount: " + modelCount);
-	//	System.out.println("homogeneous: " + homogeneousModel);
 		chainIds = new ArrayList<String>(chainCount);
 		groupCounts = new ArrayList<Integer>(chainCount);
 	}
@@ -177,7 +179,6 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 	}
 	
 	private void readChainRecord() throws IOException {
-//		System.out.println("readChainRecord");
 		inStream.skipBytes(1);
 		sequenceIndex = inStream.readInt();
 		sequenceIndices.add(sequenceIndex);
@@ -197,13 +198,12 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 			groupNumber = inStream.readInt();
 			groupNumbers.add(groupNumber);
 		} else {
-			// if no explicit group number is given, then the group number are sequential
+			// if no explicit group number is given, then the group numbers are sequential
 			groupNumbers.add(++groupNumber);
 		}
 	}
 	
 	private void readGInfoRecord() throws IOException {
-//		System.out.println("readGInfoRecord");
 		int len = inStream.readInt();
 		int aCount = inStream.readShort();
 		len -= 4*aCount + 3;
@@ -219,7 +219,6 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 	}
 	
 	private void readBFactorRecord() throws IOException {
-//		System.out.println("readBFactorRecord");
 		int len = inStream.readInt();
 		byteOffset = 0;
 		intType = 4;
@@ -231,7 +230,6 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 	}
 	
 	private void readOccupancyRecord() throws IOException {
-	//	System.out.println("readOccupancyRecord");
 		int len = inStream.readInt();	
 		int n = len/2;
 		occupancy = new int[n];
@@ -242,7 +240,6 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 	}
 
 	private void readCoordRecord() throws IOException {
-	//			System.out.println("readCoordRecord");
 		inStream.skipBytes(4);
 		int[] x = new int[MAX_GROUP_SIZE];
 		int[] y = new int[MAX_GROUP_SIZE];
@@ -259,6 +256,7 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 		int atomIndex = 0;
 
 		for (int m = 0; m < modelCount; m++) {
+			int atomSerialNumber = 0;
 			if (homogeneousModel) {
 				chainIndex = 0;
 				groupIndex = 0;
@@ -299,7 +297,6 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 					String[] info = groupInfo.get(gIndex);
 					int[] bondList = bondInfo.get(gIndex);
 					int atomCount = bondList.length/2;
-	//				System.out.println("Getting goup info: atomCount: " + atomCount);
 					byte flags = flagInfo.get(gIndex);
 
 					boolean isAminoAcid = (flags & AMINO_ACID) != 0;
@@ -344,10 +341,12 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 						int bondLength = 0;
 						if (bondList[k] >=0) {
 							bondLength = bondList[atomCount+k];
-						} else if (k == 0 && isAminoAcid && hasHead && hasTail) {
-							bondLength = PEPTIDE_BOND_LENGTH;
-						} else if (k == 0 && isNucleotide && hasHead && hasTail) {
-							bondLength = NUCLEOTIDE_BOND_LENGTH;
+						} else if (k == 0 && hasHead && hasTail) {
+							if (isAminoAcid) {
+								bondLength = PEPTIDE_BOND_LENGTH;
+							} else if (isNucleotide) {
+								bondLength = NUCLEOTIDE_BOND_LENGTH;
+							}
 						}
 
 						int[] xyz = decodeCoords(bondLength);
@@ -378,13 +377,14 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 							occ = occupancy[atomIndex];
 						}
 						atomIndex++;
+						atomSerialNumber++;
 
 						x[k] = xOffset;
 						y[k] = yOffset;
 						z[k] = zOffset;
 						b[k] = bOffset;
 
-						inflator.setAtomInfo(atomName, 0, altLoc, xOffset*XYZ_PRECISION, yOffset*XYZ_PRECISION, zOffset*XYZ_PRECISION, occ*BO_PRECISION, bOffset*BO_PRECISION, element);
+						inflator.setAtomInfo(atomName, atomSerialNumber, altLoc, xOffset*XYZ_PRECISION, yOffset*XYZ_PRECISION, zOffset*XYZ_PRECISION, occ*BO_PRECISION, bOffset*BO_PRECISION, element);
 
 						if ((isAminoAcid && atomNameTrimmed.equals(PEPTIDE_TAIL_ATOM_NAME) || (isNucleotide && atomNameTrimmed.equals(NUCLEOTIDE_TAIL_ATOM_NAME)))) {
 							xTail = xOffset;
@@ -400,6 +400,14 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 		}
 	}
 	
+	/**
+	 * Returns the next integer from the dataInputStream and sets its type (intType):
+	 *  SHORT_COORDINATE_TYPE: the integer values are decoded as shorts (2 byte signed integers)
+	 *  INTEGER_COORDINATE_TYPE: the integer values are decoded as integers (4 byte signed integers)
+	 *  ENCODED_COORDINATE_TYPE: the integer values are decoded as integers (4 byte signed integers). This type of integer value encodes the x, y, z coordinates of an atom.
+	 * @return integer value from dataInputStream
+	 * @throws IOException
+	 */
 	private int readNextInt() throws IOException {
 		int v = 0;
 		switch (intType) {
@@ -449,6 +457,15 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 		return v;
 	}
 	
+	/**
+	 * Returns the integer coordinates of an atom decoded from the dataInputStream. 
+	 * The coordinates represented deltas to the coordinates of a previous reference atom. 
+	 * If the integer is of type ENCODED_COORDINATE_TYPE, then the deltaX, deltaY, and deltaZ
+	 * coordinates are decoded from a single integer, using the standard bond length as a parameter.
+	 * @param bondLength standard bond length
+	 * @return array representing the deltaX, deltaY, and deltaZ coordinates of an atom
+	 * @throws IOException
+	 */
 	private int[] decodeCoords(int bondLength) throws IOException {
 		int v = readNextInt();
 		if (intType == ENCODED_COORDINATE_TYPE) {
@@ -465,6 +482,14 @@ public class StructureDecoderImpl1 extends StructureDecoder {
 		return buffer;
 	}
 
+	/**
+	 * Returns a string representing the information of a group (residue), including
+	 * group name, insertion code, atom name (4-character PDB atom name, may include spaces), 
+	 * element, and alternative location ids.
+	 * @param length
+	 * @return
+	 * @throws IOException
+	 */
 	private String[] readGroupInfo(int length) throws IOException {
 		int len = 2 + 3 * (length - 4)/7;
 		String[] info = new String[len];
