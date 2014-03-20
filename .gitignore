@@ -3,5 +3,7 @@
 .settings
 .classpath
 .DS_Store
+target
+*~
 /*/target
 *.swp
