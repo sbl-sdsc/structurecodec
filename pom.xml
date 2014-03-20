@@ -181,28 +181,6 @@
 						<argLine>-Xms256m -Xmx2000M</argLine>
 					</configuration>
 			</plugin>
-
-		</plugins>
-		<resources>
-			<resource>
-				<directory>src/main/resources</directory>
-				<filtering>true</filtering>
-				<includes>
-					<include>**/*.properties</include>
-				</includes>
-			</resource>
-			<resource>
-				<directory>src/main/resources</directory>
-				<filtering>false</filtering>
-				<includes>
-					<!-- <include>**/*.cif.gz</include>
-					<include>**/*.pdb</include>
-					<include>**/*.mat</include> -->
-				</includes>
-			</resource>
-		</resources>
-		
-
                         <plugin>
                                 <groupId>org.apache.maven.plugins</groupId>
                                 <artifactId>maven-jar-plugin</artifactId>
@@ -225,6 +203,28 @@
                                 </configuration>
 
                         </plugin>
+
+
+		</plugins>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+				<includes>
+					<include>**/*.properties</include>
+				</includes>
+			</resource>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>false</filtering>
+				<includes>
+					<!-- <include>**/*.cif.gz</include>
+					<include>**/*.pdb</include>
+					<include>**/*.mat</include> -->
+				</includes>
+			</resource>
+		</resources>
+		
 
 		
 		
