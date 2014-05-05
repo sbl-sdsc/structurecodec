@@ -1,9 +1,8 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.rcsb</groupId>
 	<artifactId>structurecodec</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.1.0</version>
 	<name>Structure Codec</name>
 	<url>https://github.com/rcsb/structurecodec</url>
 	<organization>
@@ -50,7 +49,8 @@
 		<developerConnection>scm:git:git@github.com:rcsb/structurecodec.git</developerConnection>
 		<connection>scm:git:git@github.com:rcsb/structurecodec.git</connection>
 		<url>https://github.com/rcsb/structurecodec</url>
-	</scm>
+	  <tag>structurecodec-0.1.0</tag>
+  </scm>
 	<issueManagement>
 		<url>https://github.com/rcsb/structurecodec/issues</url>
 		<system>Github</system>
@@ -85,19 +85,19 @@
 		<dependency>
 			<groupId>org.biojava</groupId>
 			<artifactId>biojava3-structure</artifactId>
-			<version>3.0.8-SNAPSHOT</version>
+			<version>3.0.8</version>
 
 		</dependency>
 		<dependency>
 			<groupId>org.biojava</groupId>
 			<artifactId>biojava3-structure-gui</artifactId>
-			<version>3.0.8-SNAPSHOT</version>
+			<version>3.0.8</version>
 
 		</dependency>
 		<dependency>
 			<groupId>org.biojava</groupId>
 			<artifactId>biojava3-ws</artifactId>
-			<version>3.0.8-SNAPSHOT</version>
+			<version>3.0.8</version>
 
 		</dependency>
 		<dependency>
