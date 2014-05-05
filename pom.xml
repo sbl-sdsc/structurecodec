@@ -47,8 +47,8 @@
 	</repositories>
 
 	<scm>
-		<developerConnection>scm:git://github.com/rcsb/structurecodec.git</developerConnection>
-		<connection>scm:git://github.com/rcsb/structurecodec.git</connection>
+		<developerConnection>scm:git:git@github.com:rcsb/structurecodec.git</developerConnection>
+		<connection>scm:git:git@github.com:rcsb/structurecodec.git</connection>
 		<url>https://github.com/rcsb/structurecodec</url>
 	</scm>
 	<issueManagement>
