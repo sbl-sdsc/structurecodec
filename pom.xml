@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.rcsb</groupId>
 	<artifactId>structurecodec</artifactId>
-	<version>0.1.1-SNAPSHOT</version>
+	<version>0.1.1</version>
 	<name>Structure Codec</name>
 	<url>https://github.com/rcsb/structurecodec</url>
 	<organization>
@@ -49,7 +49,7 @@
 		<developerConnection>scm:git:git@github.com:rcsb/structurecodec.git</developerConnection>
 		<connection>scm:git:git@github.com:rcsb/structurecodec.git</connection>
 		<url>https://github.com/rcsb/structurecodec</url>
-		<tag>HEAD</tag>
+		<tag>structurecodec-0.1.1</tag>
 	</scm>
 	<issueManagement>
 		<url>https://github.com/rcsb/structurecodec/issues</url>
