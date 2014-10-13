@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.rcsb</groupId>
 	<artifactId>structurecodec</artifactId>
-	<version>0.2.0-SNAPSHOT</version>
+	<version>0.3.0-SNAPSHOT</version>
 	<name>Structure Codec</name>
 	<url>https://github.com/rcsb/structurecodec</url>
 	<organization>
@@ -17,6 +17,8 @@
 		<project.build.targetEncoding>UTF-8</project.build.targetEncoding>
 		<maven.build.timestamp.format>yyyyMMdd-HHmm</maven.build.timestamp.format>
 		<timestamp>${maven.build.timestamp}</timestamp>
+
+        <biojava.version>4.0.0-SNAPSHOT</biojava.version>
 	</properties>
 
 	<repositories>
@@ -85,19 +87,19 @@
 		<dependency>
 			<groupId>org.biojava</groupId>
 			<artifactId>biojava3-structure</artifactId>
-			<version>3.0.8</version>
+			<version>${biojava.version}</version>
 
 		</dependency>
 		<dependency>
 			<groupId>org.biojava</groupId>
 			<artifactId>biojava3-structure-gui</artifactId>
-			<version>3.0.8</version>
+			<version>${biojava.version}</version>
 
 		</dependency>
 		<dependency>
 			<groupId>org.biojava</groupId>
 			<artifactId>biojava3-ws</artifactId>
-			<version>3.0.8</version>
+			<version>${biojava.version}</version>
 
 		</dependency>
 		<dependency>
